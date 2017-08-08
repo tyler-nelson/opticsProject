@@ -460,8 +460,8 @@ class driver:
                     ray.intensityList.append(ray.intensity)
                     nextObj = ray.objIndex
 
-                ray.normalVectorHistory.append([[xMin, normalVector[0]+xMin],
-                                                [yMin, normalVector[1]+yMin]])
+                #ray.normalVectorHistory.append([[xMin, normalVector[0]+xMin],
+                #                                [yMin, normalVector[1]+yMin]])
                 refractedXaxisTheta = float(mpmath.atan2(
                     mpmath.mpmathify(refractedRay[1]),
                     mpmath.mpmathify(refractedRay[0])))
