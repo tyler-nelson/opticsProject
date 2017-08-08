@@ -80,12 +80,11 @@ class Mirror:
                 f = partial(circle, True, yOffSet, R, xOffSet)
                 if(diameter):
                     if(diameter < 2*R):
-                        return cls(surfaceList=[[[xOffSet-diameter/2,
+                        return cls([[[xOffSet-diameter/2,
                                                   xOffSet+diameter/2],
                                                  [f]]],
                                    lossFunction=lossFunction)
-                    else:
-                        raise(Exception("This diameter exceeds the domain of\
+                    raise(Exception("This diameter exceeds the domain of\
                                         the mirror surface"))
                 return cls([[[xOffSet-R, xOffSet+R], [f]]],
                            lossFunction=lossFunction)
@@ -99,8 +98,7 @@ class Mirror:
                                                   xOffSet+diameter/2],
                                                  [f]]],
                                    lossFunction=lossFunction)
-                    else:
-                        raise(Exception("This diameter exceeds the domain of\
+                    raise(Exception("This diameter exceeds the domain of\
                                         the mirror surface"))
                 return cls([[[xOffSet-R, xOffSet+R], [f]]],
                            lossFunction=lossFunction)
@@ -112,7 +110,7 @@ class Mirror:
                                           xOffSet+diameter/2],
                                          [lambda x: 3+yOffSet]]])
             # else....
-            return cls([[[x0, x1], lambda x: y1-y0/(x1-x0)]],
+            return cls([[[x0, x1], lambda x: (y1-y0)/(x1-x0)*(x-xOffSet) + yOffSet]],
                        lossFunction=lossFunction)
 
     @classmethod
