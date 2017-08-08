@@ -11,13 +11,11 @@ class driver:
     def __init__(self, n, listOfRays, listOfLenses=[], listOfMirrors=[]):
         self.nMedium = n
         self.listOfRays = listOfRays
-        self.mapOfLenses = {i: listOfLenses[i]
-                            for i in range(len(listOfLenses))}
         self.listOfMirrors = listOfMirrors
         self.listOfLenses = listOfLenses
         self.surfaceList = []
-        for i in range(len(listOfLenses)):
-            self.surfaceList += listOfLenses[i].surfaceList
+        for i in listOfLenses:
+            self.surfaceList += i.surfaceList
         for i in listOfMirrors:
             self.surfaceList += i.surfaceList
         for i in listOfRays:
@@ -48,32 +46,28 @@ class driver:
         #### END OF CASES ####
         5. return if successful otherwise continue
         """
-        x, y = sourceLocation
-        mapOfLenses = self.mapOfLenses
-        for label, lens in mapOfLenses.items():
-            for orderedPair in lens.surfaceList:
+        x,y = sourceLocation
+        listOfLenses = self.listOfLenses
+        for i in range(len(self.listOfLenses)):
+            for orderedPair in listOfLenses[i].surfaceList:
                 domain, surfaces = orderedPair
                 if(len(domain) == 1):
                     if(len(surfaces) == 2):
-                        if(x > domain[0]-0.001 and x < domain[0]+0.001
-                           and y > surfaces[0] and y < surfaces[1]):
-                            return label
+                        if(x > domain[0]-0.001 and x < domain[0]+0.001 and y > surfaces[0] and y < surfaces[1]):
+                            return i
                     else:
                         print("this is the pathelogical broken lens case")
                         raise(Exception("I haven't implemented this yet"))
                 else:
-                    if(x > domain[0] and x < domain[1]):
-                        # this could still be pathelogical
+                    if(x > domain[0] and x < domain[1]):#this could still be pathelogical
                         for m in range(0, len(surfaces), 2):
-                            # I assume that odd numbers of surfaces shouldn't
-                            # be possible
-                            f1, f2 = surfaces[m], surfaces[m+1]
-                            lB, uB = sorted([complex(f1(x)).real, complex(f2(x)).real])
-                            if(lB < y and uB > y):
-                                return label
+                            f1, f2 = surfaces[m], surfaces[m+1] #I assume that odd numbers of surfaces shouldn't be possible
+                            lB, uB = sorted([complex(f1(x)).real,complex(f2(x)).real])
+                            if(lB < y and uB > y ):
+                                return i
         return -1
 
-    def rayFunc(self, threshold=0, segments=8):
+    def rayFunc(self,threshold=0,segments=8,extraRays=1,passLimit=12,digits=100):
         """
         NOTE:
         The beginning of this function is comprised of definitions of helper
@@ -154,26 +148,9 @@ class driver:
             except TypeError:
                 raise(Exception("Unexpectedly recieved complex number."))
 
-        def thetaCritical(n1, n2):
-            """
-            Determines theta critical for an interface
-            input:
-            n1 is the index of refraction of the material the ray is currently
-            in n2 is the index of refraction the next material
-            output:
-            critical angle (in rads)
-
-            NOTE: the index of refraction for a medium varies by wavelength, so
-                  these have been represented as functions. These functions
-                  must be evaluted prior to being passed into this function
-            """
-            return np.arcsin(n2/n1)
-            # this is a value that cannot be reached and serves to tell the
-            # program that the ray won't internally reflect
-
         # expected inputs for line: [slope, x intercept], surface is a
         # function, value is a reasonable estimate for where the zero occurs
-        def rayIntersectSurface(line, surface, value, use_math_re=True):
+        def rayIntersectSurface(line, surface, value):
             """
             Given two functions, f1 and f2, f1 intersected f2 when
             f1(x) - f2(x) = 0
@@ -189,13 +166,9 @@ class driver:
             according to fsolve: a list of intersection points or the last
             value used if the search was unsuccessful
             """
-            if(use_math_re):
-                return [float(mpmath.re(mpmath.findroot(
-                    lambda x: surface(x)-x*line[0]+line[0]*line[1],
-                    value, tol=1e-10, verify=False)))]
-            return opt.fsolve(func=lambda x: surface(x)-x*line[0] +
-                              line[0]*line[1], x0=value, xtol=1e-10,
-                              maxfev=200, factor=1)
+            return [float(mpmath.re(mpmath.findroot(
+                lambda x: surface(x)-x*line[0]+line[0]*line[1],
+                value, tol=1e-10, verify=False)))]
 
         def refractedRayFunction(normalVector, angle, isNegative):
             """
@@ -360,12 +333,13 @@ class driver:
                                             minDistSurface = [surface_i]
             return xMin, yMin, minDistSurface, minDistance
 
+        mp.prec = digits
         segments = int(segments)
         if(segments <= 1):
             segments = 2
         passes = 0
         listOfRays = self.listOfRays
-        while(passes < 12):
+        while(passes < passLimit):
             listOfThingsToAdd = []
             for i in range(len(listOfRays)):
                 ray = listOfRays[i]
@@ -433,18 +407,14 @@ class driver:
                         n1 = self.mapOfLenses.get(ray.objIndex).refractiveIndex
                         n2 = self.mapOfLenses.get(nextObj).refractiveIndex
                     wavelength = ray.wavelength
+                    n_1, n_2 = n1(wavelength), n2(wavelength)
                     if(theta1 > pi/2):
                         theta1 = pi - theta1
-
                     # internal reflection case need to do this still
-                    if(abs(n1(wavelength)) > abs(n2(wavelength))
-                       and theta1 >= thetaCritical(n1(wavelength),
-                                                   n2(wavelength))):
+                    if(abs(n_1) > abs(n_2) and theta1 >= np.arcsin(n_2/n_1)):#internal reflection case need to do this still
                         theta2 = theta1
-                        refractedRay1, refractedRay2 = refractedRayFunction(normalVector, theta2, 0)
-                        if(np.dot(refractedRay1, ray.unitVector) >
-                           np.dot(refractedRay2, ray.unitVector)):
-                            # don't use absolute values here
+                        refractedRay1, refractedRay2 = refractedRayFunction(normalVector, theta1, 0)
+                        if(np.dot(refractedRay1, unitVector) > np.dot(refractedRay2, unitVector)):#don't use absolute values here
                             refractedRay = refractedRay1
                         else:
                             refractedRay = refractedRay2
@@ -452,39 +422,28 @@ class driver:
                         nextObj = ray.objIndex
                     else:
                         i0 = ray.intensity
-                        if(theta1 == 0):
-                            theta2 = 0
-                        else:
-                            theta2 = np.arcsin((n1(wavelength)/n2(wavelength))*np.sin(theta1))
+                        theta2 = 0 if(theta1 == 0) else np.arcsin(n_1/n_2*np.sin(theta1))
                         refractedRay1, refractedRay2 = refractedRayFunction(normalVector, theta2, 1)
-                        if(abs(np.dot(refractedRay1, ray.unitVector)) > abs(np.dot(refractedRay2, ray.unitVector))):
+                        if(abs(np.dot(refractedRay1, unitVector)) > abs(np.dot(refractedRay2, unitVector))):
                             refractedRay = refractedRay1
                         else:
                             refractedRay = refractedRay2
-                        reflect1, reflect2 = refractedRayFunction(normalVector,
-                                                                  theta1, 0)
-                        if(np.dot(reflect1, ray.unitVector) > np.dot(reflect2, ray.unitVector)):
-                            # don't use absolute values here
+                        reflect1, reflect2 = refractedRayFunction(normalVector, theta1, 0)
+                        if(np.dot(reflect1, unitVector) > np.dot(reflect2, unitVector)):
                             reflect = reflect1
                         else:
                             reflect = reflect2
-                        Tperpendicular = n2(wavelength)*np.cos(theta2) / (n1(wavelength)*np.cos(theta1))*(Ray.tPerp(theta1,theta2, n1,n2,wavelength))**2
-                        Tparallel = n2(wavelength)*np.cos(theta2)/(n1(wavelength)*np.cos(theta1))*(Ray.tPara(theta1,theta2,n1,n2,wavelength))**2
-                        ray.perpendiular = Tperpendicular/(Tperpendicular + Tparallel)
-                        ray.parallel = Tparallel/(Tperpendicular+Tparallel)
-                        ray.update_intensity_history(theta1, theta2, n1, n2)
-                        reflectedXaxisTheta = np.arctan2(reflect[1], reflect[0])
+                        ray.update_intensity_and_polarization(theta1, theta2, n_1, n_2)
+                        reflectedXaxisTheta = np.arctan2(reflect[1],reflect[0])
                         if(reflectedXaxisTheta < 0):
                             reflectedXaxisTheta += 2*np.pi
+                        Rperp = Ray.rPerp(theta1,theta2,n_1,n_2)**2
+                        Rpara = Ray.rPara(theta1,theta2,n_1,n_2)**2
+                        s = Rperp/(Rperp + Rpara)
                         newRay = Ray(xMin, yMin, reflectedXaxisTheta,
-                                     intensity=(abs(i0 - ray.intensity)))
-                        Rperp = Ray.rPerp(theta1, theta2, n1, n2, wavelength)**2
-                        Rpara = Ray.rPara(theta1, theta2, n1, n2, wavelength)**2
-                        newRay.perpendicular = Rperp/(Rperp+Rpara)
-                        newRay.parallel = Rpara/(Rperp+Rpara)
-                        newRay.objIndex = ray.objIndex
-                        # comment this part out to look at the other
-                        # behavior
+                                     intensity = abs(i0 - ray.intensity),
+                                     objIndex = ray.objIndex,sPolarization=s, pPolarization=(1-s))
+                        #comment this part out to look at the other behavior
                         listOfThingsToAdd.append(newRay)
                 else:
                     # We can add the loss function bit later
@@ -509,11 +468,12 @@ class driver:
 
                 if(refractedXaxisTheta < 0):
                     refractedXaxisTheta += 2*np.pi
-                ray.angleHistory.append(theta1*180/pi)
-                ray.angleHistory.append(theta2*180/pi)
+                #ray.angleHistory.append(theta1*180/pi)
+                #ray.angleHistory.append(theta2*180/pi)
                 ray.update_location_history(xMin, yMin,
                                             refractedXaxisTheta, nextObj)
-            listOfRays += listOfThingsToAdd
+            if(extraRays):
+                listOfRays+=listOfThingsToAdd
             passes += 1
 
     # This method will probably keep growing however it's not too bad right now
