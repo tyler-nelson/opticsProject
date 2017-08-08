@@ -490,10 +490,11 @@ class driver:
             passes += 1
 
     # This method will probably keep growing however it's not too bad right now
-    def plotter(self, fig):
+    def plotter(self, fig, threshold=0):
         sub = fig.add_subplot(111)
         surfaceList = self.surfaceList
         # First we have to handle graphing the lens or lenses
+        realPiece = np.frompyfunc(mpmath.re, 1, 1)
         for s in range(len(surfaceList)):
             domain, surfaces = surfaceList[s]
 
@@ -516,7 +517,6 @@ class driver:
                         yList = [function(domain[0])]*len(x)
                     else:
                         yList = tester_vec(x)
-                    realPiece = np.frompyfunc(mpmath.re, 1, 1)
                     sub.plot(x, realPiece(yList))
         rayList = self.listOfRays
         for i in range(len(rayList)):
@@ -540,8 +540,9 @@ class driver:
 
             # Change this piece for different plot configurations
             for j in range(len(ray.intensityList)):
-                sub.plot(xAxList[j:j+2], yAxList[j:j+2], 'k',
-                         alpha=(ray.intensityList[j]))
+                if(ray.intensityList[j] >= threshold):
+                    sub.plot(xAxList[j:j+2], yAxList[j:j+2], 'k',
+                             alpha=(ray.intensityList[j]))
 
     def plotterJustLens(self, fig):  # for debugging
         sub = fig.add_subplot(111)
