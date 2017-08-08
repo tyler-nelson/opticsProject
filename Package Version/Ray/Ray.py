@@ -38,7 +38,6 @@ class Ray:
         # plot quantities
         # keep track of the prevous interface points
         self.locationHistory = [self.sourceLocation]
-        #self.angleHistory = [angle*180/np.pi]
 
         # light quantities
         self.wavelength = wavelength
@@ -53,7 +52,6 @@ class Ray:
         self.identity = Ray.rayCount
         Ray.rayCount += 1
         self.reflected = 0
-        #self.normalVectorHistory = []
         self.worthUsing = 1
 
     def update_location_history(self, x, y, angle, objIndex):
@@ -72,30 +70,38 @@ class Ray:
 
         # update plot quantities
         self.locationHistory.append((x, y))
-        #self.angleHistory.append(angle*180/np.pi)
 
         # update program quantity
         self.objIndex = objIndex
 
     def rPerp(angleI, angleT, nI, nT):
-        return (nI*np.cos(angleI)-nT*np.cos(angleT))/(nI*np.cos(angleI)+nT*np.cos(angleT))
+        return (nI*np.cos(angleI)-nT*np.cos(angleT)) /\
+                (nI*np.cos(angleI)+nT*np.cos(angleT))
+
     def rPara(angleI, angleT, nI, nT):
-        return (nT*np.cos(angleI)-nI*np.cos(angleT))/(nT*np.cos(angleI)+nI*np.cos(angleT))
+        return (nT*np.cos(angleI)-nI*np.cos(angleT)) /\
+                (nT*np.cos(angleI)+nI*np.cos(angleT))
+
     def tPerp(angleI, angleT, nI, nT):
         return 2*nI*np.cos(angleI)/(nI*np.cos(angleI)+nT*np.cos(angleT))
-    def tPara(angleI,angleT, nI, nT):
+
+    def tPara(angleI, angleT, nI, nT):
         return 2*nI*np.cos(angleI)/(nT*np.cos(angleI)+nI*np.cos(angleT))
 
     # should be irradience
     def update_intensity_and_polarization(self, theta1, theta2, n_1, n_2):
-        t_perp_sqr =  Ray.tPerp(theta1,theta2, n_1,n_2)**2
-        t_para_sqr = Ray.tPara(theta1,theta2,n_1,n_2)**2
+        t_perp_sqr = Ray.tPerp(theta1, theta2, n_1, n_2)**2
+        t_para_sqr = Ray.tPara(theta1, theta2, n_1, n_2)**2
         self.perpendiular = t_perp_sqr/(t_perp_sqr+t_para_sqr)
         self.parallel = 1 - self.perpendicular
+
         if(theta1 == 0):
-            self.intensity *= (self.perpendicular + self.parallel)*n_2/n_1*(2*n_1/(n_1+n_2))**2
+            self.intensity *= (self.perpendicular + self.parallel)*n_2 /\
+                            n_1*(2*n_1/(n_1+n_2))**2
         else:
-            self.intensity *= n_2*np.cos(theta2)/(n_1*np.cos(theta1))*(self.perpendicular*t_perp_sqr + self.parallel*t_para_sqr)
+            self.intensity *= n_2*np.cos(theta2)/(n_1*np.cos(theta1)) * \
+                                         (self.perpendicular*t_perp_sqr +
+                                          self.parallel*t_para_sqr)
         self.intensityList.append(self.intensity)
 
     def printString(self):
